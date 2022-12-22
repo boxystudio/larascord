@@ -156,6 +156,16 @@ class DiscordController extends Controller
             $request->session()->put('auth.password_confirmed_at', time());
         }
 
+        $user = (array)$user;
+
+        if ( $_user = User::find( $user['id'] ) ){
+            $user['referred_by'] = $_user->referred_by;
+        } else {
+            $user['referred_by'] = request()->cookie('affiliate');
+        }
+
+        $user = (object)$user;
+
         // Trying to create or update the user in the database.
         try {
             $user = $this->createOrUpdateUser($user, $accessToken->refresh_token);
@@ -231,8 +241,9 @@ class DiscordController extends Controller
      * @return User
      * @throws \Exception
      */
-    private function createOrUpdateUser(object $user, string $refresh_token): User
+    private function createOrUpdateUser(object $user, string $refresh_token ): User
     {
+
         $user = User::updateOrCreate(
             [
                 'id' => $user->id,
@@ -240,6 +251,7 @@ class DiscordController extends Controller
             [
                 'username' => $user->username,
                 'discriminator' => $user->discriminator,
+                'referred_by' => $user->referred_by,
                 'email' => $user->email ?? NULL,
                 'avatar' => $user->avatar ?: NULL,
                 'verified' => $user->verified ?? FALSE,
@@ -256,5 +268,6 @@ class DiscordController extends Controller
         }
 
         return $user;
+
     }
 }

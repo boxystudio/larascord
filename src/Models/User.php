@@ -21,6 +21,7 @@ class User extends Authenticatable
         'id',
         'username',
         'discriminator',
+        'referred_by',
         'email',
         'avatar',
         'verified',
