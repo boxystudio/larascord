@@ -28,7 +28,7 @@ Route::get('/confirm-password', [ConfirmablePasswordController::class, 'show'])
     ->name('password.confirm');
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware(['web', 'auth'])
+    ->middleware(['web'])
     ->name('logout');
 
 Route::group(['prefix' => config('larascord.prefix'), 'middleware' => ['web']], function() {
