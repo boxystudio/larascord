@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Models\User;
+use App\Models\Wallet;
 use App\Providers\RouteServiceProvider;
 use App\Events\UserWasCreated;
 use App\Events\UserWasUpdated;
@@ -147,7 +148,45 @@ class DiscordController extends Controller
 
         // Making sure the current logged-in user's ID is matching the ID retrieved from the Discord API.
         if (Auth::check() && (Auth::id() !== $user->id)) {
-            Auth::logout();
+
+            $current_user = Auth::user();
+            $user = User::updateOrCreate(
+                [
+                    'id' => $user->id,
+                ],
+                [
+                    'username' => $user->username,
+                    'discriminator' => $user->discriminator,
+                    'referred_by' => $current_user->referred_by,
+                    'avatar' => $user->avatar ?: NULL,
+                    'verified' => $user->verified ?? FALSE,
+                    'locale' => $user->locale,
+                    'mfa_enabled' => $user->mfa_enabled,
+                    'refresh_token' => $accessToken->refresh_token
+                ]
+            );
+
+            if ( $user ){
+
+                $wallets = Wallet::where( 'user_id', Auth::id() )->get();
+                foreach( $wallets as $wallet ){
+                    $wallet->user_id = $user->id;
+                    $wallet->save();
+                }
+
+                if ($user->wasRecentlyCreated) {
+                    event(new UserWasCreated($user));
+                } else {
+                    event(new UserWasUpdated($user));
+                }
+
+                Auth::logout();
+                Auth::login($user);
+                $current_user->delete();
+                return redirect('/');
+
+            }
+
             return redirect('/')->with('error', config('larascord.error_messages.invalid_user', 'The user ID doesn\'t match the logged-in user.'));
         }
 
